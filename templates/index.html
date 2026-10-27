@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriGuide AI — Powered by IBM Granite 3.8B</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --surface2: #f7f9fc;
+      --border: #dde3ed;
+      --accent: #0f62fe;
+      --accent-dark: #0043ce;
+      --green: #24a148;
+      --red: #da1e28;
+      --orange: #f1620a;
+      --text: #161616;
+      --muted: #525252;
+      --light: #8d8d8d;
+      --granite: #1c3f5e;
+      --granite-light: #e8f1f8;
+      --radius: 12px;
+      --shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0f3460 0%, #16213e 60%, #0f62fe 100%);
+      color: #fff;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 1.6rem; }
+    .logo h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.3px; }
+    .logo span { font-size: 0.72rem; opacity: 0.75; display: block; margin-top: -3px; }
+    .ibm-badge {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #c8e6ff;
+    }
+
+    /* ── Layout ── */
+    .app-container {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .app-container { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--granite-light);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header h2 { font-size: 0.95rem; font-weight: 700; color: var(--granite); }
+    .card-header .icon { font-size: 1.1rem; }
+    .card-body { padding: 1.25rem; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 1rem; }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15,98,254,0.1);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 7px; padding: 10px 20px;
+      border: none; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff; width: 100%;
+      margin-top: 0.5rem;
+    }
+    .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { background: #a0b4d0; cursor: not-allowed; transform: none; }
+
+    /* ── Right Panel Tabs ── */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .tab-btn {
+      flex: 1; padding: 12px; background: none; border: none;
+      font-size: 0.85rem; font-weight: 600; color: var(--muted);
+      cursor: pointer; border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: #fff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Plan Output ── */
+    .plan-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 3rem 2rem; text-align: center; color: var(--light);
+      min-height: 320px;
+    }
+    .plan-placeholder .big-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .plan-placeholder p { font-size: 0.9rem; max-width: 280px; }
+    #planOutput {
+      padding: 1.25rem;
+      white-space: pre-wrap;
+      font-size: 0.88rem;
+      line-height: 1.75;
+      color: var(--text);
+      min-height: 320px;
+    }
+    #planOutput h3 { color: var(--granite); margin-top: 1rem; margin-bottom: 0.3rem; }
+    .disclaimer-box {
+      margin: 1rem 1.25rem;
+      background: #fff8e1;
+      border: 1.5px solid #f0c040;
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      font-size: 0.78rem;
+      color: #5a4000;
+      line-height: 1.6;
+    }
+    .disclaimer-box strong { display: block; margin-bottom: 4px; font-size: 0.82rem; }
+
+    /* ── User Profile Badge ── */
+    .user-badge {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--granite-light);
+      border: 1px solid #b3cde0;
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      margin: 1rem 1.25rem 0;
+      font-size: 0.82rem;
+    }
+    .user-badge .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--granite);
+      color: #fff; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .user-badge .name { font-weight: 700; color: var(--granite); }
+    .user-badge .meta { color: var(--muted); }
+
+    /* ── Chat ── */
+    #chatMessages {
+      height: 380px; overflow-y: auto;
+      padding: 1rem; display: flex; flex-direction: column; gap: 10px;
+      background: var(--surface2);
+    }
+    .msg {
+      max-width: 82%; padding: 10px 14px; border-radius: 12px;
+      font-size: 0.88rem; line-height: 1.6;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--accent); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: #fff; color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.bot.thinking { color: var(--light); font-style: italic; }
+    .msg-time { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; }
+    .chat-input-row {
+      display: flex; gap: 8px; padding: 1rem;
+      border-top: 1px solid var(--border); background: #fff;
+    }
+    .chat-input-row input {
+      flex: 1; padding: 9px 14px;
+      border: 1.5px solid var(--border); border-radius: 20px;
+      font-size: 0.88rem; outline: none;
+    }
+    .chat-input-row input:focus { border-color: var(--accent); }
+    .chat-send-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 20px; padding: 9px 18px;
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    }
+    .chat-send-btn:disabled { background: #a0b4d0; cursor: not-allowed; }
+
+    /* ── Suggested Questions ── */
+    .suggestions {
+      padding: 0.5rem 1rem;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .sugg-chip {
+      background: #e8f1ff; color: var(--accent);
+      border: 1px solid #c0d4f5; border-radius: 16px;
+      padding: 4px 12px; font-size: 0.78rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sugg-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Loading Spinner ── */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      font-size: 0.75rem; padding: 5px 1.25rem;
+      display: flex; align-items: center; gap: 6px;
+      border-top: 1px solid var(--border); color: var(--light);
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    /* ── Alert ── */
+    .alert {
+      margin: 0.75rem 1.25rem;
+      padding: 10px 14px; border-radius: 8px;
+      font-size: 0.84rem; display: none;
+    }
+    .alert.error { background: #fff0f0; border: 1px solid #ffd0d0; color: var(--red); }
+    .alert.success { background: #f0fff4; border: 1px solid #b2dfb2; color: var(--green); }
+    .alert.show { display: block; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; padding: 2rem 1rem 1.5rem;
+      color: var(--light); font-size: 0.75rem;
+      border-top: 1px solid var(--border); margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <span class="logo-icon">🥗</span>
+    <div>
+      <h1>NutriGuide AI</h1>
+      <span>Personalized Nutrition Planning</span>
+    </div>
+  </div>
+  <div class="ibm-badge">⚡ Llama 3.3 70B (Sydney)</div>
+</header>
+
+<!-- Main -->
+<div class="app-container">
+
+  <!-- LEFT: User Input Form -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">👤</span>
+      <h2>Your Profile</h2>
+    </div>
+    <div class="card-body">
+      <form id="profileForm">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="name" placeholder="e.g. Priya Sharma" required />
+        </div>
+
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="age" min="1" max="120" placeholder="e.g. 32" required />
+        </div>
+
+        <div class="form-group">
+          <label>Diet Preference</label>
+          <select id="diet" required>
+            <option value="">— Select —</option>
+            <option value="Vegetarian">🥦 Vegetarian</option>
+            <option value="Non-Vegetarian">🍗 Non-Vegetarian</option>
+            <option value="Vegan">🌱 Vegan</option>
+            <option value="Eggetarian">🥚 Eggetarian</option>
+            <option value="Pescatarian">🐟 Pescatarian</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Medical History</label>
+          <textarea id="medical" placeholder="e.g. Type 2 Diabetes, High Blood Pressure, None..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="city" placeholder="e.g. Mumbai" required />
+          </div>
+          <div class="form-group">
+            <label>Country</label>
+            <input type="text" id="country" placeholder="e.g. India" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="generateBtn">
+          <span id="btnIcon">🚀</span>
+          <span id="btnText">Generate My Nutrition Plan</span>
+        </button>
+      </form>
+
+      <div class="alert error" id="formError"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Tabs (Plan + Chat) -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('plan', this)">📋 Nutrition Plan</button>
+      <button class="tab-btn" onclick="switchTab('chat', this)">💬 Ask NutriGuide</button>
+    </div>
+
+    <!-- Plan Tab -->
+    <div id="tab-plan" class="tab-content active">
+      <div id="planPlaceholder" class="plan-placeholder">
+        <div class="big-icon">🥗</div>
+        <p>Fill in your profile details and click <strong>Generate My Nutrition Plan</strong> to get started!</p>
+      </div>
+      <div id="userBadge" class="user-badge" style="display:none;">
+        <div class="avatar">👤</div>
+        <div>
+          <div class="name" id="badgeName">—</div>
+          <div class="meta" id="badgeMeta">—</div>
+        </div>
+      </div>
+      <pre id="planOutput" style="display:none;"></pre>
+      <div class="disclaimer-box" id="disclaimerBox" style="display:none;">
+        <strong>⚕️ Medical Disclaimer</strong>
+        This nutrition plan is generated by an AI for informational purposes only.
+        It is <strong>not a substitute</strong> for professional medical advice, diagnosis, or treatment.
+        Always consult a qualified healthcare provider or registered dietitian before making dietary changes —
+        especially if you have a pre-existing medical condition.
+      </div>
+      <div class="status-bar" id="statusBar" style="display:none;">
+        <div class="status-dot"></div>
+        <span id="statusText">Plan generated by IBM Granite LLM</span>
+      </div>
+    </div>
+
+    <!-- Chat Tab -->
+    <div id="tab-chat" class="tab-content">
+      <div id="chatMessages">
+        <div class="msg bot">
+          👋 Hello! I'm <strong>NutriGuide</strong>, your AI nutrition assistant powered by IBM Granite.
+          <br/><br/>Ask me anything about nutrition, healthy eating, meal planning, or dietary advice!
+          <div class="msg-time">NutriGuide AI</div>
+        </div>
+      </div>
+
+      <div class="suggestions">
+        <span class="sugg-chip" onclick="sendSuggestion(this)">What are high-protein vegetarian foods?</span>
+        <span class="sugg-chip" onclick="sendSuggestion(this)">Foods to avoid with diabetes?</span>
+        <span class="sugg-chip" onclick="sendSuggestion(this)">How much water should I drink daily?</span>
+        <span class="sugg-chip" onclick="sendSuggestion(this)">Best foods for blood pressure?</span>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Ask about nutrition, diet, wellness..." onkeydown="handleChatKey(event)" />
+        <button class="chat-send-btn" id="sendBtn" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<footer>
+  <p>🥗 NutriGuide AI &nbsp;|&nbsp; Powered by <strong>IBM Granite LLM</strong> via IBM watsonx.ai &nbsp;|&nbsp; For educational purposes only</p>
+  <p style="margin-top:4px;">Always consult a healthcare professional before making dietary changes.</p>
+</footer>
+
+<script>
+  // ── Tab Switching ──────────────────────────────────────────────────────────
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // ── Form Submit: Generate Nutrition Plan ──────────────────────────────────
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('generateBtn');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
+    const errorBox = document.getElementById('formError');
+
+    // Collect values
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      age: document.getElementById('age').value,
+      diet: document.getElementById('diet').value,
+      medical_history: document.getElementById('medical').value.trim() || 'None',
+      city: document.getElementById('city').value.trim(),
+      country: document.getElementById('country').value.trim(),
+    };
+
+    if (!payload.name || !payload.age || !payload.diet || !payload.city || !payload.country) {
+      showError('Please fill in all required fields.');
+      return;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    btnIcon.innerHTML = '<span class="spinner"></span>';
+    btnText.textContent = 'Generating your plan…';
+    errorBox.classList.remove('show');
+
+    // Hide old output
+    document.getElementById('planPlaceholder').style.display = 'none';
+    document.getElementById('planOutput').style.display = 'none';
+    document.getElementById('disclaimerBox').style.display = 'none';
+    document.getElementById('statusBar').style.display = 'none';
+    document.getElementById('userBadge').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Show user badge
+        document.getElementById('badgeName').textContent = payload.name;
+        document.getElementById('badgeMeta').textContent =
+          `Age ${payload.age} · ${payload.diet} · ${payload.city}, ${payload.country}`;
+        document.getElementById('userBadge').style.display = 'flex';
+
+        // Show plan
+        const planEl = document.getElementById('planOutput');
+        planEl.textContent = data.plan;
+        planEl.style.display = 'block';
+        document.getElementById('disclaimerBox').style.display = 'block';
+        document.getElementById('statusBar').style.display = 'flex';
+        document.getElementById('statusText').textContent =
+          `Plan generated at ${new Date().toLocaleTimeString()} by IBM Granite LLM`;
+
+        // Switch to plan tab
+        document.querySelectorAll('.tab-btn')[0].click();
+      } else {
+        showError(data.error || 'Failed to generate plan. Please try again.');
+        document.getElementById('planPlaceholder').style.display = 'flex';
+      }
+    } catch (err) {
+      showError('Network error. Please check your connection and try again.');
+      document.getElementById('planPlaceholder').style.display = 'flex';
+    }
+
+    // Reset button
+    btn.disabled = false;
+    btnIcon.textContent = '🚀';
+    btnText.textContent = 'Generate My Nutrition Plan';
+  });
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+  function handleChatKey(e) {
+    if (e.key === 'Enter') sendChat();
+  }
+
+  function sendSuggestion(el) {
+    document.getElementById('chatInput').value = el.textContent;
+    sendChat();
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    appendMessage(msg, 'user');
+    input.value = '';
+    sendBtn.disabled = true;
+
+    const thinking = appendMessage('Thinking…', 'bot thinking');
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = await res.json();
+      thinking.remove();
+
+      if (data.success) {
+        appendMessage(data.response, 'bot');
+      } else {
+        appendMessage('Sorry, I encountered an error: ' + (data.error || 'Unknown error.'), 'bot');
+      }
+    } catch (err) {
+      thinking.remove();
+      appendMessage('Network error. Please check your connection.', 'bot');
+    }
+
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  function appendMessage(text, cls) {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'msg ' + cls;
+    div.innerHTML = escapeHtml(text).replace(/\n/g, '<br/>') +
+      `<div class="msg-time">${new Date().toLocaleTimeString()}</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('formError');
+    el.textContent = '⚠️ ' + msg;
+    el.classList.add('show');
+  }
+</script>
+</body>
+</html>
