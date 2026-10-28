@@ -1,15 +1,35 @@
+# Writing Pulse — Agentic AI Blogging Assistant
+# Python dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Web framework & UI ────────────────────────────────────────
 streamlit>=1.35.0
+
+# ── HTTP & API ────────────────────────────────────────────────
 requests>=2.31.0
+
+# ── Environment / config ──────────────────────────────────────
 python-dotenv>=1.0.0
+
+# ── RSS / News data ───────────────────────────────────────────
 feedparser>=6.0.11
+
+# ── HTML parsing ──────────────────────────────────────────────
 beautifulsoup4>=4.12.3
 lxml>=5.2.2
+
+# ── Image handling ────────────────────────────────────────────
 Pillow>=10.3.0
+
+# ── Voice / audio input (optional) ───────────────────────────
+# PyAudio is required for microphone input; install separately:
+#   Windows : pip install pipwin && pipwin install pyaudio
+#   Ubuntu  : sudo apt-get install portaudio19-dev && pip install pyaudio
 SpeechRecognition>=3.10.4
-pyaudio>=0.2.14
-textblob>=0.18.0
-nltk>=3.8.1
+
+# ── Data & visualisation ──────────────────────────────────────
 pandas>=2.2.2
 plotly>=5.22.0
+
+# ── Date utilities ────────────────────────────────────────────
 python-dateutil>=2.9.0
-trafilatura>=1.9.0

@@ -1,21 +1,62 @@
 """
-agents/content_agent.py
-Generates SEO-friendly blog drafts from topic + research context.
-Accepts text, image description, and voice transcript inputs.
+agents/content_agent.py — Content Generation Agent
+====================================================
+Generates SEO-optimised blog drafts using IBM Granite via watsonx.ai.
+Accepts multi-modal inputs: text notes, image descriptions, voice transcripts.
+Applies responsible AI guardrails before every LLM call.
+
+Capabilities:
+  • generate_blog_draft(...)       — full SEO blog post with structured output
+  • generate_social_snippets(...)  — Twitter/X, LinkedIn, Instagram posts
+  • process_voice_input(audio)     — voice-to-text transcription
+  • guardrail_check(text)          — responsible AI content filter
 """
 
 import re
 from config import Config
 
 
-def _guardrail_check(text: str) -> tuple[bool, str]:
-    """Returns (is_safe, reason). Blocks content violating responsible AI rules."""
+# ── Responsible AI guardrails ──────────────────────────────────────────────────
+
+def guardrail_check(text: str) -> tuple[bool, str]:
+    """
+    Input/output safety filter.
+    Returns (is_safe: bool, reason: str).
+    Blocks content matching any configured harmful keyword category.
+    """
     lower = text.lower()
     for kw in Config.BLOCKED_KEYWORDS:
         if kw in lower:
-            return False, f"Content blocked: contains '{kw}'. Please revise."
+            return False, (
+                f"⛔ Content blocked by responsible AI guardrail: "
+                f"detected '{kw}'. Please revise your input."
+            )
     return True, ""
 
+
+def _safe_generate(system: str, user_msg: str, llm, max_tokens: int, temperature: float) -> str:
+    """
+    Wrapper that checks both input and output for guardrail violations.
+    Raises ValueError if either check fails.
+    """
+    # Input check
+    combined_input = system + " " + user_msg
+    safe, reason = guardrail_check(combined_input)
+    if not safe:
+        raise ValueError(reason)
+
+    raw = llm.ask(system, user_msg, max_tokens=max_tokens, temperature=temperature)
+
+    # Output check
+    safe, reason = guardrail_check(raw)
+    if not safe:
+        raise ValueError(
+            f"⛔ LLM output blocked by responsible AI guardrail: {reason}"
+        )
+    return raw
+
+
+# ── Blog draft generation ──────────────────────────────────────────────────────
 
 def generate_blog_draft(
     topic: str,
@@ -24,126 +65,198 @@ def generate_blog_draft(
     word_count: int,
     extra_context: str,
     llm,
+    include_citations: bool = True,
 ) -> dict:
     """
-    Generate a full SEO-optimised blog draft.
-    Returns dict with title, meta_description, content, sources_used.
+    Generate a full SEO-optimised blog draft using IBM Granite.
+
+    Returns a structured dict with:
+      seo_title, meta_description, content, suggested_tags,
+      link_suggestions, focus_keyword, word_count_est, raw
     """
-    safe, reason = _guardrail_check(topic + " " + extra_context)
+    # Guardrail input check
+    safe, reason = guardrail_check(topic + " " + (extra_context or ""))
     if not safe:
         return {"error": reason}
 
     system = (
-        "You are an expert blog writer, SEO specialist, and content strategist. "
-        "Write engaging, well-structured, SEO-optimised blog posts. "
-        "Always include: SEO title, meta description, H2 headings, "
-        "a call-to-action, and internal/external link suggestions. "
-        "Never plagiarise. Cite sources where provided. "
-        "Be factual, original, and reader-friendly."
+        "You are an expert blog writer, SEO specialist, and content strategist "
+        "working for a top digital publication. "
+        "Your blog posts are engaging, well-researched, SEO-optimised, and reader-friendly. "
+        "Rules you always follow:\n"
+        "• Use a compelling hook in the introduction\n"
+        "• Include descriptive H2 and H3 subheadings\n"
+        "• Naturally weave in the focus keyword 3-5 times\n"
+        "• Cite research sources where provided\n"
+        "• End with a clear call-to-action\n"
+        "• Never plagiarise — all content must be original\n"
+        "• Be factual; do not fabricate statistics or quotes\n"
+        "• Avoid harmful, misleading, or biased content"
+    )
+
+    research_section = (
+        f"\nResearch context (use this to add depth and cite sources):\n"
+        f"{research_summary}\n"
+        if research_summary.strip()
+        else "\nNo research context provided — draw from general knowledge.\n"
+    )
+    extra_section = (
+        f"\nAdditional author notes / context:\n{extra_context}\n"
+        if extra_context and extra_context.strip()
+        else ""
     )
 
     user_msg = (
-        f"Write a {word_count}-word blog post on: '{topic}'\n\n"
-        f"Tone: {tone}\n\n"
-        f"Research context:\n{research_summary}\n\n"
-        f"Additional context / notes from author:\n{extra_context or 'None'}\n\n"
-        "Structure your response EXACTLY as:\n"
-        "**SEO Title:** [title]\n"
-        "**Meta Description:** [150 char max]\n"
+        f"Write a {word_count}-word blog post on: **'{topic}'**\n\n"
+        f"Tone: {tone}\n"
+        f"{research_section}"
+        f"{extra_section}\n"
+        "Structure your response EXACTLY in this format:\n\n"
+        "**SEO Title:** [compelling title, 50-65 chars]\n"
+        "**Focus Keyword:** [primary SEO keyword phrase]\n"
+        "**Meta Description:** [enticing description, 140-160 chars]\n\n"
         "**Blog Post:**\n"
-        "[Full blog post with H2 headings, intro, body sections, conclusion, CTA]\n"
-        "**Suggested Tags:** [comma-separated]\n"
-        "**Link Suggestions:** [2-3 relevant URLs or topics to link]\n"
+        "[Full blog post — hook intro, 3-5 H2 sections with H3 subsections where needed, "
+        "conclusion with CTA. Use Markdown formatting.]\n\n"
+        "**Suggested Tags:** [tag1, tag2, tag3, tag4, tag5]\n"
+        "**Link Suggestions:** [3 relevant internal or external link topics/URLs]\n"
+        "**Estimated Word Count:** [number]"
     )
 
-    raw = llm.ask(system, user_msg, max_tokens=2000, temperature=0.75)
+    try:
+        raw = _safe_generate(system, user_msg, llm, Config.DRAFT_MAX_TOKENS, 0.75)
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"LLM generation failed: {e}"}
 
-    # Parse structured output
-    result = {
+    # ── Parse structured output ───────────────────────────────────────────────
+    result: dict = {
         "seo_title":        "",
+        "focus_keyword":    "",
         "meta_description": "",
         "content":          "",
         "suggested_tags":   [],
         "link_suggestions": [],
+        "word_count_est":   0,
         "raw":              raw,
     }
 
-    lines = raw.splitlines()
-    content_started = False
-    content_lines   = []
-    after_content   = False
+    content_lines: list[str] = []
+    section = None
 
-    for line in lines:
-        if line.startswith("**SEO Title:**"):
-            result["seo_title"] = line.replace("**SEO Title:**", "").strip()
-        elif line.startswith("**Meta Description:**"):
-            result["meta_description"] = line.replace("**Meta Description:**", "").strip()
-        elif line.startswith("**Blog Post:**"):
-            content_started = True
-            after_content   = False
-        elif line.startswith("**Suggested Tags:**"):
-            content_started = False
-            after_content   = True
-            tags = line.replace("**Suggested Tags:**", "").strip()
-            result["suggested_tags"] = [t.strip() for t in tags.split(",") if t.strip()]
-        elif line.startswith("**Link Suggestions:**"):
-            result["link_suggestions"] = [line.replace("**Link Suggestions:**", "").strip()]
-        elif content_started and not after_content:
+    for line in raw.splitlines():
+        s = line.strip()
+        if s.startswith("**SEO Title:**"):
+            result["seo_title"] = s.replace("**SEO Title:**", "").strip()
+            section = None
+        elif s.startswith("**Focus Keyword:**"):
+            result["focus_keyword"] = s.replace("**Focus Keyword:**", "").strip()
+            section = None
+        elif s.startswith("**Meta Description:**"):
+            result["meta_description"] = s.replace("**Meta Description:**", "").strip()
+            section = None
+        elif s.startswith("**Blog Post:**"):
+            section = "blog"
+        elif s.startswith("**Suggested Tags:**"):
+            section = None
+            tags_raw = s.replace("**Suggested Tags:**", "").strip()
+            result["suggested_tags"] = [
+                t.strip().lstrip("#") for t in tags_raw.split(",") if t.strip()
+            ]
+        elif s.startswith("**Link Suggestions:**"):
+            section = "links"
+            link_raw = s.replace("**Link Suggestions:**", "").strip()
+            if link_raw:
+                result["link_suggestions"].append(link_raw)
+        elif s.startswith("**Estimated Word Count:**"):
+            m = re.search(r"\d+", s)
+            if m:
+                result["word_count_est"] = int(m.group())
+            section = None
+        elif section == "blog":
             content_lines.append(line)
+        elif section == "links" and s and not s.startswith("**"):
+            result["link_suggestions"].append(s)
 
     result["content"] = "\n".join(content_lines).strip()
     if not result["content"]:
-        result["content"] = raw  # fallback: show raw if parsing fails
+        result["content"] = raw  # fallback
 
     return result
 
 
+# ── Social media snippet generation ───────────────────────────────────────────
+
 def generate_social_snippets(blog_title: str, blog_excerpt: str, llm) -> dict:
-    """Generate Twitter/X, LinkedIn, and Instagram captions for the blog post."""
+    """
+    Generate platform-optimised social media posts for Twitter/X,
+    LinkedIn, and Instagram to promote a published blog post.
+    """
     system = (
-        "You are a social media marketing expert. "
-        "Write platform-optimised social media posts to promote a blog article."
+        "You are a social media strategist and copywriter. "
+        "Write platform-specific posts that maximise engagement and clicks. "
+        "Twitter/X: punchy, max 280 chars, 2-3 hashtags. "
+        "LinkedIn: professional, value-focused, 2-3 sentences. "
+        "Instagram: engaging, emotive, 5-7 hashtags in caption."
     )
     user_msg = (
         f"Blog title: {blog_title}\n"
-        f"Blog excerpt: {blog_excerpt[:400]}\n\n"
-        "Write promotional posts for:\n"
-        "**Twitter/X:** [max 280 chars, include 3 hashtags]\n"
-        "**LinkedIn:** [professional tone, 2-3 sentences]\n"
-        "**Instagram:** [engaging caption + 5 hashtags]\n"
+        f"Blog excerpt: {blog_excerpt[:450]}\n\n"
+        "Write promotional posts for each platform. "
+        "Format EXACTLY as:\n\n"
+        "**Twitter/X:** [post text]\n"
+        "**LinkedIn:** [post text]\n"
+        "**Instagram:** [post text]\n"
     )
-    raw = llm.ask(system, user_msg, max_tokens=400, temperature=0.8)
+    try:
+        raw = _safe_generate(system, user_msg, llm, Config.SOCIAL_MAX_TOKENS, 0.8)
+    except ValueError as e:
+        return {"twitter": str(e), "linkedin": "", "instagram": ""}
+    except Exception as e:
+        return {"twitter": f"Error: {e}", "linkedin": "", "instagram": ""}
 
-    snippets = {"twitter": "", "linkedin": "", "instagram": ""}
-    current = None
+    snippets: dict = {"twitter": "", "linkedin": "", "instagram": ""}
+    current: str | None = None
+
     for line in raw.splitlines():
-        if "**Twitter/X:**" in line or "**Twitter:**" in line:
+        s = line.strip()
+        if s.startswith("**Twitter/X:**") or s.startswith("**Twitter:**"):
             current = "twitter"
-            snippets["twitter"] = line.split(":", 2)[-1].strip()
-        elif "**LinkedIn:**" in line:
+            content = re.sub(r"\*\*Twitter(/X|):\*\*", "", s).strip()
+            snippets["twitter"] = content
+        elif s.startswith("**LinkedIn:**"):
             current = "linkedin"
-            snippets["linkedin"] = line.split(":", 2)[-1].strip()
-        elif "**Instagram:**" in line:
+            content = s.replace("**LinkedIn:**", "").strip()
+            snippets["linkedin"] = content
+        elif s.startswith("**Instagram:**"):
             current = "instagram"
-            snippets["instagram"] = line.split(":", 2)[-1].strip()
-        elif current and line.strip():
-            snippets[current] += " " + line.strip()
+            content = s.replace("**Instagram:**", "").strip()
+            snippets["instagram"] = content
+        elif current and s and not s.startswith("**"):
+            snippets[current] += (" " + s) if snippets[current] else s
 
     return snippets
 
 
+# ── Voice input processing ─────────────────────────────────────────────────────
+
 def process_voice_input(audio_file) -> str:
     """
-    Transcribe an uploaded audio file using SpeechRecognition.
-    Falls back gracefully if audio libs are unavailable.
+    Transcribe an uploaded audio file using SpeechRecognition (Google STT).
+    Gracefully degrades if audio libraries are not available.
     """
     try:
         import speech_recognition as sr
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_file) as source:
+            recognizer.adjust_for_ambient_noise(source, duration=0.3)
             audio = recognizer.record(source)
         return recognizer.recognize_google(audio)
     except ImportError:
-        return "[Voice transcription requires PyAudio. Please type your input instead.]"
-    except Exception as e:
-        return f"[Transcription failed: {e}. Please type your input.]"
+        return (
+            "[Voice transcription unavailable — PyAudio not installed. "
+            "Please type your input instead.]"
+        )
+    except Exception as exc:
+        return f"[Voice transcription failed: {exc}. Please type your input.]"
