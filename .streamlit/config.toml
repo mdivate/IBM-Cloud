@@ -1,0 +1,33 @@
+# .streamlit/config.toml
+# Streamlit production configuration for IBM Cloud Code Engine deployment
+
+[server]
+# IBM Cloud Code Engine maps external HTTPS to this port
+port = 8080
+address = "0.0.0.0"
+headless = true
+
+# Security settings for cloud deployment
+enableCORS = false
+enableXsrfProtection = false
+
+# Performance
+maxUploadSize = 10
+
+[browser]
+# Disable usage stats & update checks in production
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8080
+
+[theme]
+# Writing Pulse custom theme (IBM design language)
+primaryColor        = "#0f62fe"
+backgroundColor     = "#ffffff"
+secondaryBackgroundColor = "#f4f4f4"
+textColor           = "#161616"
+font                = "sans serif"
+
+[logger]
+level = "warning"
+messageFormat = "%(asctime)s %(levelname)s %(message)s"

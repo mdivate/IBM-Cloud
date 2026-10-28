@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────
+# .dockerignore — Writing Pulse
+# Exclude files that must NOT go into the Docker image
+# ─────────────────────────────────────────────────────────────
+
+# Secrets — NEVER include in image
+.env
+*.env
+.env.*
+!.env.example
+
+# Git metadata
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Development / IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp
+*.log
+logs/
+tmp/
+temp/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# Documentation (not needed at runtime)
+README.md
+
+# CI/CD
+.github/

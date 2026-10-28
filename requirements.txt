@@ -1,35 +1,36 @@
 # Writing Pulse — Agentic AI Blogging Assistant
-# Python dependencies
-# Install with: pip install -r requirements.txt
+# Production dependencies (pinned for reproducible IBM Cloud deployments)
+# Install: pip install -r requirements.txt
 
 # ── Web framework & UI ────────────────────────────────────────
-streamlit>=1.35.0
+streamlit==1.45.1
 
 # ── HTTP & API ────────────────────────────────────────────────
-requests>=2.31.0
+requests==2.32.3
 
 # ── Environment / config ──────────────────────────────────────
-python-dotenv>=1.0.0
+python-dotenv==1.1.0
 
 # ── RSS / News data ───────────────────────────────────────────
-feedparser>=6.0.11
+feedparser==6.0.11
 
 # ── HTML parsing ──────────────────────────────────────────────
-beautifulsoup4>=4.12.3
-lxml>=5.2.2
+beautifulsoup4==4.13.4
+lxml==5.4.0
 
 # ── Image handling ────────────────────────────────────────────
-Pillow>=10.3.0
+Pillow==11.2.1
 
-# ── Voice / audio input (optional) ───────────────────────────
-# PyAudio is required for microphone input; install separately:
+# ── Voice / audio input (optional — graceful fallback if absent) ──
+# Install separately if needed:
 #   Windows : pip install pipwin && pipwin install pyaudio
 #   Ubuntu  : sudo apt-get install portaudio19-dev && pip install pyaudio
-SpeechRecognition>=3.10.4
+#   macOS   : brew install portaudio && pip install pyaudio
+SpeechRecognition==3.14.3
 
 # ── Data & visualisation ──────────────────────────────────────
-pandas>=2.2.2
-plotly>=5.22.0
+pandas==2.2.3
+plotly==6.1.2
 
 # ── Date utilities ────────────────────────────────────────────
-python-dateutil>=2.9.0
+python-dateutil==2.9.0.post0
