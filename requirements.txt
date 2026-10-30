@@ -22,11 +22,11 @@ lxml==5.4.0
 Pillow==11.2.1
 
 # ── Voice / audio input (optional — graceful fallback if absent) ──
-# Install separately if needed:
-#   Windows : pip install pipwin && pipwin install pyaudio
-#   Ubuntu  : sudo apt-get install portaudio19-dev && pip install pyaudio
-#   macOS   : brew install portaudio && pip install pyaudio
-SpeechRecognition==3.14.3
+# Not installed on Streamlit Cloud (no PortAudio); the app falls back gracefully.
+# Install locally if needed:
+#   Windows : pip install pipwin && pipwin install pyaudio && pip install SpeechRecognition
+#   Ubuntu  : sudo apt-get install portaudio19-dev && pip install pyaudio SpeechRecognition
+#   macOS   : brew install portaudio && pip install pyaudio SpeechRecognition
 
 # ── Data & visualisation ──────────────────────────────────────
 pandas==2.2.3
