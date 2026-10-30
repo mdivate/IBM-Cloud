@@ -1,39 +1,13 @@
 # Writing Pulse — Agentic AI Blogging Assistant
-# Production dependencies (pinned for reproducible IBM Cloud deployments)
+# Cloud-compatible requirements (tested on Python 3.12–3.14, Streamlit Cloud)
 # Install: pip install -r requirements.txt
 
-# ── Web framework & UI ────────────────────────────────────────
-streamlit>=1.45.1
-
-# ── HTTP & API ────────────────────────────────────────────────
-requests==2.32.3
-
-# ── Environment / config ──────────────────────────────────────
-python-dotenv==1.1.0
-
-# ── RSS / News data ───────────────────────────────────────────
-feedparser==6.0.11
-
-# ── HTML parsing ──────────────────────────────────────────────
-beautifulsoup4>=4.12.0
-# lxml is optional (used as an alternative BS4 parser); the app uses the
-# built-in html.parser so lxml is not needed on Streamlit Cloud.
-# Uncomment locally if you want faster parsing:
-# lxml>=5.0.0
-
-# ── Image handling ────────────────────────────────────────────
-Pillow>=11.2.1
-
-# ── Voice / audio input (optional — graceful fallback if absent) ──
-# Not installed on Streamlit Cloud (no PortAudio); the app falls back gracefully.
-# Install locally if needed:
-#   Windows : pip install pipwin && pipwin install pyaudio && pip install SpeechRecognition
-#   Ubuntu  : sudo apt-get install portaudio19-dev && pip install pyaudio SpeechRecognition
-#   macOS   : brew install portaudio && pip install pyaudio SpeechRecognition
-
-# ── Data & visualisation ──────────────────────────────────────
-pandas>=2.2.3
-plotly>=6.1.2
-
-# ── Date utilities ────────────────────────────────────────────
-python-dateutil>=2.9.0
+streamlit
+requests
+python-dotenv
+feedparser
+beautifulsoup4
+Pillow
+pandas
+plotly
+python-dateutil

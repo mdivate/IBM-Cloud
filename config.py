@@ -1,22 +1,36 @@
 """
 config.py — Central configuration for Writing Pulse AI Blogging Assistant.
-All secrets loaded from environment variables / .env file only.
-Never hard-code credentials in source files.
+Loads secrets from Streamlit Cloud secrets, environment variables, or .env file.
+Priority: st.secrets > environment variables > .env file.
 """
 
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env file locally (no-op on Streamlit Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# Load from Streamlit secrets if running on Streamlit Cloud
+def _get(key: str, default: str = "") -> str:
+    """Read from st.secrets first, then os.environ, then default."""
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    return os.environ.get(key, default)
 
 
 class Config:
     # ── IBM watsonx.ai / Granite ──────────────────────────────────────────────
-    WATSONX_API_KEY    = os.environ.get("WATSONX_API_KEY", "")
-    WATSONX_PROJECT_ID = os.environ.get("WATSONX_PROJECT_ID", "280ea383-d47b-42ab-a981-b28f66296121")
-    WATSONX_ENDPOINT   = os.environ.get("WATSONX_ENDPOINT",  "https://au-syd.ml.cloud.ibm.com")
-    # Primary: IBM Granite 3.3 8B Instruct — if unavailable, falls back to Llama 3.3 70B
-    WATSONX_MODEL_ID   = os.environ.get("WATSONX_MODEL_ID",  "ibm/granite-3-3-8b-instruct")
+    WATSONX_API_KEY    = _get("WATSONX_API_KEY", "")
+    WATSONX_PROJECT_ID = _get("WATSONX_PROJECT_ID", "280ea383-d47b-42ab-a981-b28f66296121")
+    WATSONX_ENDPOINT   = _get("WATSONX_ENDPOINT",  "https://au-syd.ml.cloud.ibm.com")
+    WATSONX_MODEL_ID   = _get("WATSONX_MODEL_ID",  "ibm/granite-3-3-8b-instruct")
     WATSONX_FALLBACK_MODEL = "meta-llama/llama-3-3-70b-instruct"
     IAM_TOKEN_URL      = "https://iam.cloud.ibm.com/identity/token"
     WATSONX_API_VER    = "2025-02-11"
@@ -33,16 +47,16 @@ class Config:
 
     # ── RSS / News feeds (public, no auth) ───────────────────────────────────
     RSS_FEEDS = {
-        "TechCrunch":         "https://techcrunch.com/feed/",
-        "Wired":              "https://www.wired.com/feed/rss",
-        "MIT Tech Review":    "https://www.technologyreview.com/feed/",
-        "HackerNews Top":     "https://hnrss.org/frontpage",
-        "Dev.to":             "https://dev.to/feed",
-        "The Verge":          "https://www.theverge.com/rss/index.xml",
-        "Ars Technica":       "https://feeds.arstechnica.com/arstechnica/index",
-        "VentureBeat":        "https://venturebeat.com/feed/",
-        "InfoQ":              "https://www.infoq.com/feed/?utm_source=infoq&utm_medium=feed&utm_campaign=feed",
-        "ZDNet":              "https://www.zdnet.com/news/rss.xml",
+        "TechCrunch":       "https://techcrunch.com/feed/",
+        "Wired":            "https://www.wired.com/feed/rss",
+        "MIT Tech Review":  "https://www.technologyreview.com/feed/",
+        "HackerNews Top":   "https://hnrss.org/frontpage",
+        "Dev.to":           "https://dev.to/feed",
+        "The Verge":        "https://www.theverge.com/rss/index.xml",
+        "Ars Technica":     "https://feeds.arstechnica.com/arstechnica/index",
+        "VentureBeat":      "https://venturebeat.com/feed/",
+        "InfoQ":            "https://www.infoq.com/feed/",
+        "ZDNet":            "https://www.zdnet.com/news/rss.xml",
     }
 
     # ── Guardrails — blocked topic/content categories ────────────────────────
